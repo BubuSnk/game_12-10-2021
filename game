@@ -1,0 +1,320 @@
+#include<stdio.h>
+#include<iostream>
+#include<conio.h>
+#include<stdbool.h>
+#include<windows.h>
+#include<time.h>
+using namespace std;
+
+int enemyY[3];
+int enemyX[3];
+int enemyFlag[3];
+int ship_pos=50;
+int bIndex = 0;
+int bullets[20][4];
+int bulletsLife[20];
+char ship[3][5] = { ' ',' ','±',' ',' ',
+					'|','±','±','±','|',
+					'±','±','±','±','±' }; 
+
+void setcursor(bool visible)
+{
+    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO lpCursor;
+    lpCursor.bVisible = visible;
+    lpCursor.dwSize = 20;
+    SetConsoleCursorInfo(console,&lpCursor);
+}
+
+void setcolor(int fg,int bg)
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, bg*16+fg);
+}
+
+void gotoxy(int x, int y)
+{
+    COORD c = { x, y };
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+}
+
+void erase(int x, int y,int s)
+{
+	int i;
+    gotoxy(x, y);
+    for(i=0;i<s;i++){
+    	cout<<" ";
+	}
+    gotoxy(x, y);
+}
+
+void draw_ship(){
+	for(int i=0; i<3; i++){
+		for(int j=0; j<5; j++){
+			gotoxy(j+ship_pos, i+25); 
+			cout<<ship[i][j];
+		}
+	}
+}
+
+void erase_ship(){
+	for(int i=0; i<3; i++){
+		for(int j=0; j<5; j++){
+			gotoxy(j+ship_pos, i+25); 
+			cout<<" ";
+		}
+	}
+}
+
+void genEnemy(int ind){
+	enemyX[ind] = 3 + rand()%(95);  
+}
+
+void drawEnemy(int ind){
+	if( enemyFlag[ind] == true ){
+		gotoxy(enemyX[ind], enemyY[ind]);   cout<<".**.";  
+		gotoxy(enemyX[ind], enemyY[ind]+1); cout<<"****"; 
+		gotoxy(enemyX[ind], enemyY[ind]+2); cout<<"****"; 
+		gotoxy(enemyX[ind], enemyY[ind]+3); cout<<".**."; 
+		 
+	} 
+}
+
+void eraseEnemy(int ind){
+	if( enemyFlag[ind] == true ){
+		gotoxy(enemyX[ind], enemyY[ind]); cout<<"    ";  
+		gotoxy(enemyX[ind], enemyY[ind]+1); cout<<"    "; 
+		gotoxy(enemyX[ind], enemyY[ind]+2); cout<<"    "; 
+		gotoxy(enemyX[ind], enemyY[ind]+3); cout<<"    "; 
+	} 
+}
+
+void resetEnemy(int ind){
+	eraseEnemy(ind);
+	enemyY[ind] = 1;
+	genEnemy(ind);
+}
+
+void border()
+{
+	int i, j;
+    for(i=1; i<=30; i++){
+        for(j=1; j<=100; j++){
+            if(i==1 || i==30 || j==1 || j==100){cout<<"*";}           
+            else{cout<<" ";}
+        }
+        printf("\n");
+    }
+}
+
+void genBullet(){
+	bullets[bIndex][0] = 22;
+	bullets[bIndex][1] = ship_pos;
+	bullets[bIndex][2] = 22; 
+	bullets[bIndex][3] = ship_pos+4; 
+	bIndex++;
+	if( bIndex == 20)
+		bIndex = 0;
+}
+
+void moveBullet(){
+	for(int i=0; i<20; i++){
+		if( bullets[i][0] > 2 )
+			bullets[i][0]--;
+		else
+			bullets[i][0] = 0;
+		
+		if( bullets[i][2] > 2 )
+			bullets[i][2]--;
+		else
+			bullets[i][2] = 0;
+	} 
+}
+
+void drawBullets(){
+	for(int i=0; i<20; i++){
+		if( bullets[i][0] > 1){
+			gotoxy(bullets[i][1],bullets[i][0]); cout<<"."; 
+			gotoxy(bullets[i][3],bullets[i][2]); cout<<".";
+		}
+	}
+}
+
+void eraseBullets(){
+	for(int i=0; i<20; i++){
+		if( bullets[i][0] >= 1 ){
+			gotoxy(bullets[i][1],bullets[i][0]+1); cout<<" ";
+			gotoxy(bullets[i][3],bullets[i][2]+1); cout<<" ";
+			gotoxy(bullets[i][1],2); cout<<" ";
+			gotoxy(bullets[i][3],2); cout<<" ";
+		}		
+	}
+}
+
+void eraseBullet(int i){ 
+	gotoxy(bullets[i][1],bullets[i][0]+1); cout<<" ";
+	gotoxy(bullets[i][3],bullets[i][2]+1); cout<<" "; 
+	gotoxy(bullets[i][1],2); cout<<" ";
+	gotoxy(bullets[i][3],2); cout<<" ";
+}
+
+int ship_hit(){
+	
+		if( enemyX[0] + 4 - ship_pos >= 0 && enemyX[0] + 4 - ship_pos < 8 && enemyY[0]+4 >= 23 ){
+			return 1;
+		}		
+		if( enemyX[1] + 4 - ship_pos >= 0 && enemyX[1] + 4 - ship_pos < 8 && enemyY[1]+1 >= 23  ){
+			return 1;
+		}	
+		if( enemyX[2] + 4 - ship_pos >= 0 && enemyX[2] + 4 - ship_pos < 8 && enemyY[2]+1 >= 23  ){
+			return 1;
+		}		
+	return 0;
+}
+
+char cursor(int x, int y)
+{
+	HANDLE hStd = GetStdHandle(STD_OUTPUT_HANDLE);
+	char buf[2]; COORD c = {x,y}; DWORD num_read;
+	if(
+		!ReadConsoleOutputCharacter(hStd,(LPTSTR)buf,1,c,(LPDWORD)&num_read) )
+		return '\0';
+	else
+		return buf[0];
+}
+
+int bulletHit(){
+	for(int i=0; i<20; i++){
+		for(int j=0; j<4; j+=2){
+			if( bullets[i][j] != 0 ){
+				if( bullets[i][j] >= enemyY[0] && bullets[i][j] <= enemyY[0]+4 ){
+					if( bullets[i][j+1] >= enemyX[0] && bullets[i][j+1] <= enemyX[0]+4 ){
+						eraseBullet(i);
+						bullets[i][j] = 0;
+						resetEnemy(0); 
+						return 1;
+					}
+				}
+				if( bullets[i][j] >= enemyY[1] && bullets[i][j] <= enemyY[1]+4 ){
+					if( bullets[i][j+1] >= enemyX[1] && bullets[i][j+1] <= enemyX[1]+4 ){
+						eraseBullet(i);
+						resetEnemy(1); 
+						bullets[i][j] = 0;
+						return 1;
+					}
+				}
+				if( bullets[i][j] >= enemyY[2] && bullets[i][j] <= enemyY[2]+4 ){
+					if( bullets[i][j+1] >= enemyX[2] && bullets[i][j+1] <= enemyX[1]+4 ){
+						eraseBullet(i);
+						resetEnemy(2); 
+						bullets[i][j] = 0;
+						return 1;
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+struct Ship
+{
+	int x;
+	int y;
+	int direction;
+};
+
+
+
+int main(){
+	
+	struct Ship ship;
+	ship.direction = 0;
+	setcursor(0);
+	border();
+	
+	enemyFlag[0] = enemyFlag[1]= enemyFlag[2]=1;  
+	enemyY[0] = rand()%(10);
+	enemyY[1] = rand()%(4);
+	enemyY[2] = rand()%(8);	
+	genEnemy(0);
+	genEnemy(1);
+	genEnemy(2);
+			
+	char ch = '-';
+	while(1){
+        if (_kbhit()) {
+            ch = _getch();
+        	switch(ch) {
+        			case 'a':
+        			ship.direction = 1;
+        			break;
+        		case 'd':
+        			ship.direction = 2;
+        			break;        		
+        		case 's':
+        			ship.direction = 0;
+        			break;
+			 	case ' ': 
+				 	genBullet();  
+					break;			 
+        	}
+   		}
+   		
+   		draw_ship();
+   		drawBullets();
+          		
+		//enemy move
+		if( enemyFlag[0] == 1 )
+			eraseEnemy(0);
+			enemyY[0] += 1;
+			drawEnemy(0);		
+		if( enemyFlag[1] == 1 )
+			eraseEnemy(1);
+			enemyY[1] += 1;
+			drawEnemy(1);
+		if( enemyFlag[2] == 1 )
+			eraseEnemy(2);
+			enemyY[2] += 1;
+			drawEnemy(2);	
+					 
+		if( enemyY[0] > 24 ){ 
+			resetEnemy(0); 
+		}
+		if( enemyY[1] > 24 ){ 
+			resetEnemy(1); 
+		}
+		if( enemyY[2] > 24 ){ 
+			resetEnemy(2); 
+		}
+				
+		//ship move
+        if(ship.direction == 1 && ship_pos > 2){
+        	
+            erase_ship();
+            ship_pos=ship_pos-2;
+            draw_ship();
+        }
+        if(ship.direction == 2 && ship_pos < 93){
+            
+			erase_ship();
+			ship_pos=ship_pos+2;
+            draw_ship();            
+        }
+        
+
+        if( ship_hit() == 1  ){
+		//	gameover(); 
+			return 0;
+		}
+		//if(cursor(bullets[j].X, bullets[j].Y-1) == '*'||cursor(bullets[j].X, bullets[j].Y-1) == '.' ){
+			 
+	//	} 
+		
+		
+		eraseBullets();
+		moveBullet();  
+		   
+        Sleep(100);	 
+	}
+}
